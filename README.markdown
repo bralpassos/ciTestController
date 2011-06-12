@@ -12,6 +12,11 @@ Using
 
 Instructions of use are in **tests.php**.
 
+License
+-------
+
+The BSD License.
+
 Changelog
 ---------
 
