@@ -3,10 +3,25 @@
  * tests.php
  *
  * This is an improvement for CodeIgniter's UnitTest Library.
- * This helps you writing more organized tests. By default it only shows fail tests.
+ * This helps you writing more organized tests, separating them into methods.
+ * By default it only shows failed tests.
+ *
+ * I want to keep this software in a single controller file. But if grows
+ * bigger I'll think a way of splitting it into a controller and a view.
+ *
+ * ==== Changelog ====
+ * Version 0.1 - June 11th 2011
+ *     - First release
+ *     - Tests' results are shown in a table
+ *     - Write tests into methods
+ *
+ * Version 0.2 - June 12th 2011
+ *     - Added a title to the report
+ *     - Added lots of comments/doc to code
+ *     - Added some style to report table 
  *
  * @author Evaldo Junior <junior@casoft.info>
- * @version 0.1
+ * @version 0.2
  * @package
  * @subpackage controllers
  */
@@ -27,12 +42,23 @@ class Tests extends CI_Controller {
     public function  __construct() { 
         parent::__construct();
 
+        /**
+         * CONFIG YOUR SETTINGS HERE
+         */
         $this->conf = array(
             'show_passed'       => FALSE,           // Show passed tests?
-            'app_name'          => 'CodeIgniter'    // Your app's name
+            'app_name'          => 'CodeIgniter'    // Your app's name, show in report's header
         );
     }
 
+    /**
+     * index
+     *
+     * Default method
+     * 
+     * @access public
+     * @return void
+     */
     public function index() {
         // Running all tests...
         $this->load->library('unit_test');
@@ -40,30 +66,46 @@ class Tests extends CI_Controller {
         $this->_display_results();
     }
 
+    /**
+     * _run_all_tests
+     *
+     * This method run all methods name _test_*()
+     * 
+     * @access private
+     * @return void
+     */
     private function _run_all_tests() {
         $methods = get_class_methods('Tests');
 
+        // Getting methods' names
         foreach ($methods as $method) {
             if (strpos($method, '_test') === 0) {
                 $this->$method();
             }
         }
-
+ 
+        // CI UnitTest
         $results = $this->unit->result();
 
         $this->total_tests  = 0;
         $this->passed_tests = 0;
         $this->failed_tests = 0;
 
-        $this->result_table = '<table style="width: 100%;">';
+        // TODO split the template to a view?
+        $style_passed   = 'color: #0C0; font-size: 140%; font-weight: bold; text-align: center;';
+        $style_failed   = 'color: #C00; font-size: 140%; font-weight: bold; text-align: center;';
+        $first_line     = 'style="border: 1px solid #444;"';
+        $lines          = 'style="border: 1px solid #444; border-top: 0px;"';
+
+        $this->result_table = '<table style="width: 100%; font-size: 12px; color: #444;">';
 
         foreach ($results as $result) {
             $this->total_tests++;
             if ($result['Result'] == 'Passed') {
                 $this->passed_tests++;
                 if ($this->conf['show_passed']) {
-                    $this->result_table .= '<tr><td colspan="2" style="color: #0C0; font-size: 140%; font-weight: bold; text-align: center">'.$result['Test Name'].'</td></tr>';
-                    $this->result_table .= '<tr><td style="width: 200px;">Test Datatype</td><td>'.$result['Test Datatype'].'</td></tr>';
+                    $this->result_table .= '<tr '.$first_line.'><td colspan="2" style="'.$style_passed.'">'.$result['Test Name'].'</td></tr>';
+                    $this->result_table .= '<tr><td style="width: 150px;">Test Datatype</td><td>'.$result['Test Datatype'].'</td></tr>';
                     $this->result_table .= '<tr><td>Expected Datatype</td><td>'.$result['Expected Datatype'].'</td></tr>';
                     $this->result_table .= '<tr><td>Test Result</td><td style="color: #0c0;">Passed</td></tr>';
                     $this->result_table .= '<tr><td>Line Number</td><td>'.$result['Line Number'].'</td></tr>';
@@ -73,8 +115,8 @@ class Tests extends CI_Controller {
             }
             else {
                 $this->failed_tests++;
-                $this->result_table .= '<tr><td colspan="2" style="color: #C00; font-size: 140%; font-weight: bold; text-align: center">'.$result['Test Name'].'</td></tr>';
-                $this->result_table .= '<tr><td style="width: 200px;">Test Datatype</td><td>'.$result['Test Datatype'].'</td></tr>';
+                $this->result_table .= '<tr><td colspan="2" style="'.$style_failed.'">'.$result['Test Name'].'</td></tr>';
+                $this->result_table .= '<tr><td style="width: 150px;">Test Datatype</td><td>'.$result['Test Datatype'].'</td></tr>';
                 $this->result_table .= '<tr><td>Expected Datatype</td><td>'.$result['Expected Datatype'].'</td></tr>';
                 $this->result_table .= '<tr><td>Test Result</td><td style="color: #c00;">Failed</td></tr>';
                 $this->result_table .= '<tr><td>Line Number</td><td>'.$result['Line Number'].'</td></tr>';
@@ -86,9 +128,19 @@ class Tests extends CI_Controller {
         $this->result_table .= '</table>';
     }
 
+    /**
+     * _display_results
+     *
+     * This method writes the output to the browser
+     * 
+     * @access private
+     * @return void
+     */
     private function _display_results() {
+        // CI HTML helper
         $this->load->helper('html');
 
+        // Background color for the result div. Green for all tests passed and red if one or more failed.
         $div_color = ($this->failed_tests > 0) ? '#C00' : '#0C0';
         
         echo doctype();
@@ -97,6 +149,7 @@ class Tests extends CI_Controller {
         echo "<title>Tests for '{$this->conf['app_name']}'</title>";
         echo '</head><body>';
         echo '<div style="width: 700px; margin: 10px auto;">';
+        echo heading("UnitTests for {$this->conf['app_name']}", 1);
         echo '<div style="padding: 1px 10px; background-color: '.$div_color.'; margin-bottom: 20px;">';
         echo '<h2>Tests : '.$this->total_tests.'</h2>';
         echo '<h2>Fails : '.$this->failed_tests.'</h2>';
@@ -112,16 +165,16 @@ class Tests extends CI_Controller {
      * Your methods must be named _test_TEST_NAME()
      * and also must be private
      * 
-     * Here is an test example
+     * Here are two test examples
      ************************************************/
     private function _test_example_passes() {
         // This test will pass
-        $this->unit->run(2, 2, 'Two is equal two =)');
+        $this->unit->run(2, 2, 'Two equal two =)');
     }
 
     private function _test_example_fails() {
-        // This test will pass
-        $this->unit->run(4, 2, 'Four is equal two??');
+        // This test will NOT pass
+        $this->unit->run(4, 2, 'Four equal two??');
     }
 }
 
